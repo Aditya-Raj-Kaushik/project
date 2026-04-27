@@ -110,3 +110,30 @@ def get_volatility(symbol: str):
         "symbol": symbol.upper(),
         "volatility": round(vol, 6)
     }
+    
+    
+    
+@app.get("/analytics/{symbol}/moving-average")
+def moving_average(symbol: str, window: int = 3):
+
+    records = list(
+        ohlcv_collection.find(
+            {"symbol": symbol.upper()},
+            {"_id": 0, "Date": 1, "Close": 1}
+        ).sort("Date", 1)
+    )
+
+    df = pd.DataFrame(records)
+
+    if df.empty:
+        return {"error": "No data found"}
+
+    df["ma"] = df["Close"].rolling(window=window).mean()
+
+    result = df.fillna(0).to_dict(orient="records")
+
+    return {
+        "symbol": symbol.upper(),
+        "window": window,
+        "data": result
+    }
