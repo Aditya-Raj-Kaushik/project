@@ -8,10 +8,15 @@ import numpy as np
 
 app = FastAPI(title="Quant Market Engine")
 
+
+# HOME API
 @app.get("/")
 def home():
     return {"message": "Quant Market Engine Running"}
 
+
+
+# FETCH AND STORE OHLCV DATA API
 @app.get("/fetch/{symbol}")
 def fetch_store(symbol: str):
 
@@ -45,7 +50,10 @@ def fetch_store(symbol: str):
         "rejected_count": len(rejected),
         "status": "completed"
     }
-    
+ 
+ 
+ 
+ # GET HISTORICAL MARKET DATA API   
 @app.get("/data/{symbol}")
 def get_data(symbol: str):
 
@@ -60,6 +68,7 @@ def get_data(symbol: str):
 
 
 
+# RETURNS API
 @app.get("/analytics/{symbol}/returns")
 def get_returns(symbol: str):
 
@@ -87,6 +96,7 @@ def get_returns(symbol: str):
     
     
 
+# VOLATILITY API
 @app.get("/analytics/{symbol}/volatility")
 def get_volatility(symbol: str):
 
@@ -113,6 +123,7 @@ def get_volatility(symbol: str):
     
     
     
+# MOVING AVERAGE API
 @app.get("/analytics/{symbol}/moving-average")
 def moving_average(symbol: str, window: int = 3):
 
@@ -140,7 +151,7 @@ def moving_average(symbol: str, window: int = 3):
     
     
     
-    
+# SUMMARY API 
 @app.get("/analytics/{symbol}/summary")
 def summary(symbol: str):
 
