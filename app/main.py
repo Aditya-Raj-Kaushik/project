@@ -199,10 +199,8 @@ def detect_anomaly(symbol: str):
 
     df["return"] = df["Close"].pct_change()
 
-    # flag large daily moves > 10%
     price_anomalies = df[np.abs(df["return"]) > 0.10]
 
-    # flag unusual volume > 2x avg
     avg_vol = df["Volume"].mean()
     volume_anomalies = df[df["Volume"] > avg_vol * 2]
 
@@ -210,4 +208,43 @@ def detect_anomaly(symbol: str):
         "symbol": symbol.upper(),
         "price_anomalies": price_anomalies.fillna(0).to_dict(orient="records"),
         "volume_anomalies": volume_anomalies.to_dict(orient="records")
+    }
+    
+    
+    
+
+@app.get("/quality/{symbol}")
+def quality_score(symbol: str):
+
+    records = list(
+        ohlcv_collection.find(
+            {"symbol": symbol.upper()},
+            {"_id": 0}
+        )
+    )
+
+    df = pd.DataFrame(records)
+
+    if df.empty:
+        return {"error": "No data found"}
+
+    total_rows = len(df)
+
+    missing_values = int(df.isnull().sum().sum())
+
+    invalid_prices = int((df["High"] < df["Low"]).sum())
+
+    zero_volume = int((df["Volume"] == 0).sum())
+
+    penalties = missing_values + invalid_prices + zero_volume
+
+    score = max(0, round(100 - (penalties / total_rows) * 100, 2))
+
+    return {
+        "symbol": symbol.upper(),
+        "rows": total_rows,
+        "missing_values": missing_values,
+        "invalid_prices": invalid_prices,
+        "zero_volume_rows": zero_volume,
+        "quality_score": score
     }
