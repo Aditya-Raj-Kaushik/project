@@ -258,3 +258,19 @@ def quality_score(symbol: str):
         "zero_volume_rows": zero_volume,
         "quality_score": score
     }
+    
+    
+    
+@app.get("/live/{symbol}")
+def live_price(symbol: str):
+
+    value = r.get(f"live:{symbol.upper()}")
+
+    if value is None:
+        return {"error": "No live data cached"}
+
+    return {
+        "symbol": symbol.upper(),
+        "live_close": float(value),
+        "source": "redis_cache"
+    }
