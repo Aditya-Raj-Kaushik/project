@@ -4,3 +4,5 @@ pymongo
 yfinance
 pandas
 python-dotenv
+redis
+schedule
