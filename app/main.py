@@ -5,6 +5,7 @@ from app.database import ohlcv_collection
 from app.validator import validate_record
 import pandas as pd
 import numpy as np
+from app.cache import r
 
 app = FastAPI(title="Quant Market Engine")
 
