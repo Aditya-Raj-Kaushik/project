@@ -6,6 +6,8 @@ from app.validator import validate_record
 import pandas as pd
 import numpy as np
 from app.cache import r
+from pydantic import BaseModel
+from typing import List
 
 app = FastAPI(title="Quant Market Engine")
 
@@ -280,13 +282,17 @@ def live_price(symbol: str):
     }
     
     
-    
+class PortfolioRequest(BaseModel):
+    symbols: List[str]
+
 
 @app.post("/portfolio/analytics")
-def portfolio_analytics(symbols: list[str]):
+def portfolio_analytics(request: PortfolioRequest):
 
     import pandas as pd
     import numpy as np
+
+    symbols = request.symbols
 
     price_data = {}
 
@@ -305,18 +311,14 @@ def portfolio_analytics(symbols: list[str]):
 
         df = df[["Date", "Close"]]
         df.rename(columns={"Close": symbol.upper()}, inplace=True)
-
         df.set_index("Date", inplace=True)
 
         price_data[symbol.upper()] = df
 
     merged = pd.concat(price_data.values(), axis=1).dropna()
-
     returns = merged.pct_change().dropna()
 
-    # portfolio equal weights
     weights = np.ones(len(symbols)) / len(symbols)
-
     portfolio_returns = returns.dot(weights)
 
     mean_return = float(portfolio_returns.mean())
@@ -338,11 +340,13 @@ def portfolio_analytics(symbols: list[str]):
     }
     
     
+
 @app.post("/portfolio/correlation")
-def correlation(symbols: list[str]):
+def correlation(request: PortfolioRequest):
 
     import pandas as pd
 
+    symbols = request.symbols
     price_data = {}
 
     for symbol in symbols:
@@ -364,10 +368,14 @@ def correlation(symbols: list[str]):
 
         price_data[symbol.upper()] = df
 
-    merged = pd.concat(price_data.values(), axis=1).dropna()
+    merged = pd.concat(price_data.values(), axis=1)
 
+    merged = merged.fillna(method="ffill").dropna()
     returns = merged.pct_change().dropna()
 
     corr = returns.corr()
 
-    return corr.to_dict()
+    return {
+        "symbols": symbols,
+        "correlation_matrix": corr.to_dict()
+    }
