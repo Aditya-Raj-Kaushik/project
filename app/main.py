@@ -278,3 +278,61 @@ def live_price(symbol: str):
         "live_close": float(value),
         "source": "redis_cache"
     }
+    
+    
+    
+
+@app.post("/portfolio/analytics")
+def portfolio_analytics(symbols: list[str]):
+
+    import pandas as pd
+    import numpy as np
+
+    price_data = {}
+
+    for symbol in symbols:
+        records = list(
+            ohlcv_collection.find(
+                {"symbol": symbol.upper()},
+                {"_id": 0, "Date": 1, "Close": 1}
+            ).sort("Date", 1)
+        )
+
+        df = pd.DataFrame(records)
+
+        if df.empty:
+            return {"error": f"No data for {symbol}"}
+
+        df = df[["Date", "Close"]]
+        df.rename(columns={"Close": symbol.upper()}, inplace=True)
+
+        df.set_index("Date", inplace=True)
+
+        price_data[symbol.upper()] = df
+
+    merged = pd.concat(price_data.values(), axis=1).dropna()
+
+    returns = merged.pct_change().dropna()
+
+    # portfolio equal weights
+    weights = np.ones(len(symbols)) / len(symbols)
+
+    portfolio_returns = returns.dot(weights)
+
+    mean_return = float(portfolio_returns.mean())
+    volatility = float(portfolio_returns.std())
+
+    sharpe = float(mean_return / volatility) if volatility != 0 else 0
+
+    cumulative = (1 + portfolio_returns).cumprod()
+    peak = cumulative.cummax()
+    drawdown = (cumulative - peak) / peak
+    max_drawdown = float(drawdown.min())
+
+    return {
+        "symbols": symbols,
+        "mean_return": round(mean_return, 6),
+        "volatility": round(volatility, 6),
+        "sharpe_ratio": round(sharpe, 4),
+        "max_drawdown": round(max_drawdown, 4)
+    }
